@@ -96,16 +96,36 @@
 		In this section, the classes and properties that provide a basis for the ${ontology.label} are described
 		
 		<h4>Classes</h4>
-		${classes}
+		<div class="panel panel-info" id="classTemplate">
+			<div class="panel-heading">
+				<h3 class="panel-title"><a id="${class.anchor}">${class.label}</a></h3>
+			</div>
+	    	<div class="panel-body">
+				${class.description}<br/>
+				<h4>Described by:</h4> ${class.propertydomain}<br/>
+	    		<h4>In Range of:</h4> ${class.propertyrange}<br/>
+	    		<h4>Subclass of:</h4> ${class.subclassof}<br/>
+	    		<h4>Subclassed By:</h4> ${class.subclassedby}<br/>
+	    	</div>
+	   	</div>
 		
 		<h4>Properties</h4>
-		${properties}
-		
-
-
-		
-		
-		
+	   	<div class="panel panel-warning" id="propertyTemplate">
+			<div class="panel-heading">
+				<h3 class="panel-title" style="display: inline-block;">
+				<a id="${property.anchor}">${property.label}</a></h3>&nbsp;${property.types}
+	    	</div>
+	    	<div class="panel-body">
+	    		${property.description}<br/>
+	    		<h4>Domain of:</h4> ${property.classdomain}<br/>
+	    		<h4>Range of:</h4> ${property.classrange}<br/>
+	    		<h4>Has Minimum Cardinality:</h4> ${property.mincardinality}<br/>
+	    		<h4>Has Maximum Cardinality:</h4> ${property.maxcardinality}<br/>
+	    		<h4>Inverse of:</h4> ${property.inverse}<br/>
+	    		<h4>Sub-Property of:</h4> ${property.subpropertyof}<br/>
+	    		<h4>Super-Property of:</h4> ${property.subpropertyby}<br/>
+	    	</div>
+	    </div>
 		
 		<footer class="footer text-muted">
 			<leftalign><small>Copyright:</small></leftalign><rightalign><small>Last Updated: ${ontology.modified}</small></rightalign>

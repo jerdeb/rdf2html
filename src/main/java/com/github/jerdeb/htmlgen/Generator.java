@@ -4,6 +4,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.regex.Pattern;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.safety.Whitelist;
 
 import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryExecution;
@@ -27,6 +32,7 @@ public class Generator {
 
 	private static Model ontology = ModelFactory.createDefaultModel();
 	private static String htmlTemplate = "";
+	private static Document htmlTemplateDoc;
 	
 	private static String namespace = "";
 
@@ -117,20 +123,8 @@ public class Generator {
 	    
 	    
 	    StringBuilder classBuilder = new StringBuilder();
-	    
-	    classBuilder.append("<div class=\"panel panel-info\">");
-	    classBuilder.append("<div class=\"panel-heading\">");
-	    classBuilder.append("<h3 class=\"panel-title\"><a id=\"${class.anchor}\">${class.label}</a></h3>");
-	    classBuilder.append("</div>");
-	    classBuilder.append("<div class=\"panel-body\">");
-	    classBuilder.append("${class.description}<br/>");
-	    classBuilder.append("${class.propertydomain}");
-	    classBuilder.append("${class.propertyrange}");
-	    classBuilder.append("${class.subclassof}");
-	    classBuilder.append("${class.subclassedby}");
-	    //TODO add OWL:Restriction
-	    classBuilder.append("</div>");
-	    classBuilder.append("</div>");
+		String classTemplate = htmlTemplateDoc.getElementById("classTemplate").outerHtml();
+		classBuilder.append(classTemplate);
 	    
 	    //TODO make all fields optional
 		String queryClassDescription = "SELECT DISTINCT ?class ?label ?description WHERE {"+
@@ -163,11 +157,15 @@ public class Generator {
 	    	_cb = _cb.replace("${class.subclassof}", createClassSubClassOf(sol.get("class").asResource().toString()));
 	    	_cb = _cb.replace("${class.subclassedby}", createClassSubClassedBy(sol.get("class").asResource().toString()));
 
+	    	_cb = _cb.replaceAll("(.)+(<del>)\n", "");
+	    	
+	    	_cb = _cb.replaceAll("(<br />)(?:\\s+(<br />))+", "<br />");
+	    	
 	    	allClasses.append(_cb);
 	    }
 	    classTOC.deleteCharAt(classTOC.lastIndexOf(","));
 	    htmlTemplate = htmlTemplate.replace("${classes.label}", classTOC.toString());
-	    htmlTemplate = htmlTemplate.replace("${classes}", allClasses.toString());
+	    htmlTemplate = htmlTemplate.replace(classTemplate, allClasses.toString());
 	}
 	
 	
@@ -184,8 +182,8 @@ public class Generator {
 		}
 		if (ret.length() > 0) {
 			ret.deleteCharAt(ret.lastIndexOf(","));
-			ret.insert(0, "<h4>Described by:</h4>");
-			ret.append("<br/>");
+		} else {
+			ret.append("<del>");
 		}
 		
 		return ret.toString();
@@ -204,8 +202,8 @@ public class Generator {
 		}
 		if (ret.length() > 0){
 			ret.deleteCharAt(ret.lastIndexOf(","));
-			ret.insert(0, "<h4>In Range of:</h4>");
-			ret.append("<br/>");
+		}else {
+			ret.append("<del>");
 		}
 		
 		return ret.toString();
@@ -228,8 +226,8 @@ public class Generator {
 		}
 		if (ret.length() > 0) {
 			ret.deleteCharAt(ret.lastIndexOf(","));
-			ret.insert(0, "<h4>Subclass of:</h4>");
-			ret.append("<br/>");
+		} else {
+			ret.append("<del>");
 		}
 		
 		return ret.toString();
@@ -248,8 +246,8 @@ public class Generator {
 		}
 		if (ret.length() > 0){
 			ret.deleteCharAt(ret.lastIndexOf(","));
-			ret.insert(0, "<h4>Subclassed By:</h4>");
-			ret.append("<br/>");
+		} else {
+			ret.append("<del>");
 		}
 		
 		return ret.toString();
@@ -278,26 +276,9 @@ public class Generator {
 	    	htmlTemplate = htmlTemplate.replace("${property.count}", String.valueOf(cnt));
 	    }
 	    
-	    
-	    
 	    StringBuilder propertyBuilder = new StringBuilder();
-	    
-	    propertyBuilder.append("<div class=\"panel panel-warning\">");
-	    propertyBuilder.append("<div class=\"panel-heading\">");
-	    propertyBuilder.append("<h3 class=\"panel-title\" style=\"display: inline-block;\"><a id=\"${property.anchor}\">${property.label}</a></h3>&nbsp;${property.types}");
-	    propertyBuilder.append("</div>");
-	    propertyBuilder.append("<div class=\"panel-body\">");
-	    propertyBuilder.append("${property.description}<br/>");
-	    propertyBuilder.append("${property.classdomain}<br/>");
-	    propertyBuilder.append("${property.classrange}<br/>");
-	    propertyBuilder.append("${property.mincardinality}<br/>");
-	    propertyBuilder.append("${property.maxcardinality}<br/>");
-	    propertyBuilder.append("${property.inverse}<br/>");
-	    propertyBuilder.append("${property.subpropertyof}<br/>");
-	    propertyBuilder.append("${property.subpropertyby}<br/>");
-	    
-	    propertyBuilder.append("</div>");
-	    propertyBuilder.append("</div>");
+		String propertyTemplate = htmlTemplateDoc.getElementById("propertyTemplate").outerHtml();
+	    propertyBuilder.append(propertyTemplate);
 	    
 		String queryClassDescription = "SELECT DISTINCT *  WHERE {"+
 				"{ ?class a <" + RDF.Property + "> . } UNION " +
@@ -332,34 +313,38 @@ public class Generator {
 	    	_cb = _cb.replace("${property.types}", createPropertyTypes(sol.get("class").asResource().toString()));
 	    	
 	    	if (sol.get("description") != null) _cb = _cb.replace("${property.description}", sol.get("description").asLiteral().toString());
-	    	else _cb = _cb.replace("${property.description}<br/>","");
+	    	else _cb = _cb.replace("${property.description}","");
 
-	    	if (sol.get("domain") != null) _cb = _cb.replace("${property.classdomain}", "<h4>Has Domain:</h4>"+createHTMLResource(sol.get("domain").asResource().toString()));
-	    	else _cb = _cb.replace("${property.classdomain}", "<h4>Has Domain:</h4> -");
+	    	if (sol.get("domain") != null) _cb = _cb.replace("${property.classdomain}", createHTMLResource(sol.get("domain").asResource().toString()));
+	    	else _cb = _cb.replace("${property.classdomain}", "-");
 
 	    	
-	    	if (sol.get("range") != null) _cb = _cb.replace("${property.classrange}", "<h4>Has Range:</h4>"+createHTMLResource(sol.get("range").asResource().toString()));
-	    	else _cb = _cb.replace("${property.classrange}", "<h4>Has Range:</h4> -");
+	    	if (sol.get("range") != null) _cb = _cb.replace("${property.classrange}", createHTMLResource(sol.get("range").asResource().toString()));
+	    	else _cb = _cb.replace("${property.classrange}", "-");
 	    		
-	    	if (sol.get("mincardinality") != null) _cb = _cb.replace("${property.mincardinality}", "<h4>Has Minimum Cardinality:</h4>"+String.valueOf(sol.get("mincardinality").asLiteral().getInt()));
-	    	else _cb = _cb.replace("${property.mincardinality}<br/>","");
+	    	if (sol.get("mincardinality") != null) _cb = _cb.replace("${property.mincardinality}", String.valueOf(sol.get("mincardinality").asLiteral().getInt()));
+	    	else _cb = _cb.replace("${property.mincardinality}","<del>");
 	    	
-	    	if (sol.get("maxcardinality") != null) _cb = _cb.replace("${property.maxcardinality}", "<h4>Has Minimum Cardinality:</h4>"+String.valueOf(sol.get("maxcardinality").asLiteral().getInt()));
-	    	else _cb = _cb.replace("${property.maxcardinality}<br/>","");
+	    	if (sol.get("maxcardinality") != null) _cb = _cb.replace("${property.maxcardinality}", String.valueOf(sol.get("maxcardinality").asLiteral().getInt()));
+	    	else _cb = _cb.replace("${property.maxcardinality}","<del>");
 	    	
-	    	if (sol.get("inverse") != null) _cb = _cb.replace("${property.inverse}", "<h4>Inverse of:</h4>"+createHTMLResource(sol.get("inverse").asResource().toString()));
-	    	else _cb = _cb.replace("${property.inverse}<br/>","");
+	    	if (sol.get("inverse") != null) _cb = _cb.replace("${property.inverse}", createHTMLResource(sol.get("inverse").asResource().toString()));
+	    	else _cb = _cb.replace("${property.inverse}","<del>");
 	    	
-	    	if (sol.get("subpropertyof") != null) _cb = _cb.replace("${property.subpropertyof}", "<h4>Subproperty of:</h4>"+createHTMLResource(sol.get("subpropertyof").asResource().toString()));
-	    	else _cb = _cb.replace("${property.subpropertyof}<br/>","");
+	    	if (sol.get("subpropertyof") != null) _cb = _cb.replace("${property.subpropertyof}", createHTMLResource(sol.get("subpropertyof").asResource().toString()));
+	    	else _cb = _cb.replace("${property.subpropertyof}","<del>");
 	    	
-	    	_cb = _cb.replace("${property.subpropertyby}<br/>", createSubPropertyBy(sol.get("class").asResource().toString()));
+	    	_cb = _cb.replace("${property.subpropertyby}", createSubPropertyBy(sol.get("class").asResource().toString()));
+	    	
+	    	_cb = _cb.replaceAll("(.)+(<del>)\n", "");
+	    	
+	    	_cb = _cb.replaceAll("(<br />)(?:\\s+(<br />))+", "<br />");
 	    	
 	    	allProp.append(_cb);
 	    }
 	    propertiesTOC.deleteCharAt(propertiesTOC.lastIndexOf(","));
 	    htmlTemplate = htmlTemplate.replace("${properties.label}", propertiesTOC.toString());
-	    htmlTemplate = htmlTemplate.replace("${properties}", allProp.toString());
+	    htmlTemplate = htmlTemplate.replace(propertyTemplate, allProp.toString());
 	}
 	
 	private static String createPropertyTypes(String classURI){
@@ -390,8 +375,8 @@ public class Generator {
 		
 		if (sb.length() > 0){
 			sb.deleteCharAt(sb.lastIndexOf(","));
-			sb.insert(0, "<h4>Superproperty For:</h4>");
-			sb.append("<br/>");
+		} else {
+			sb.append("<del>");
 		}
 		
 
@@ -454,8 +439,14 @@ public class Generator {
 		
 		
 		String tmp = "/Users/jeremy/Sites/ontologies/template.html";//Generator.class.getResource("template.html").getFile();
-		htmlTemplate = com.google.common.io.Files.toString(new File(tmp), Charset.defaultCharset());
+//		htmlTemplate = com.google.common.io.Files.toString(new File(tmp), Charset.defaultCharset());
 		
+		
+		htmlTemplateDoc = Jsoup.parse(new File(tmp), Charset.defaultCharset().toString());
+		htmlTemplateDoc.outputSettings().prettyPrint(true).indentAmount(0);
+
+		
+		htmlTemplate = htmlTemplateDoc.html();
 		htmlTemplate =  htmlTemplate.replace("${asciidoc.path}", asciidoc);
 		
 		ontologyDescription();
@@ -463,7 +454,10 @@ public class Generator {
 		propertyDescription();
 		instanceDescriptions();
 		
-	    System.out.println(htmlTemplate);
+		Document cleaned = Jsoup.parse(htmlTemplate);
+		cleaned.outputSettings().prettyPrint(true).indentAmount(3).outline(true);
+		
+	    System.out.println(cleaned.html());
 
 	}
 }
