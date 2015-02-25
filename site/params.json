@@ -1,0 +1,20 @@
+{
+	"settings":
+	{
+		"topbar":true,
+		"toc":false
+	},
+    "topbar": 
+	{
+            "title": "Luzzu Ontology Stack",
+			"links":[
+				"daQ",
+				"QPROB",
+				"LMI"
+			]
+    },
+	"serialisations" : [
+		"rdf/xml",
+		"turtle"
+	]
+}

@@ -1,0 +1,11 @@
+leftalign{
+	text-align: left;
+	float:left;
+	margin:auto;
+}
+
+rightalign{
+	text-align: right;
+	float:right;
+	margin:auto;
+}
