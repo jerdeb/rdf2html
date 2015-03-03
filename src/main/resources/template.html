@@ -12,11 +12,18 @@
     <!-- Bootstrap core CSS -->
     <link href="css/main.css" rel="stylesheet">
     <link href="css/util.css" rel="stylesheet">
-	
+
+<!--    <link type="text/css" rel="stylesheet" href="http://linked-research.270a.info/media/css/lncs.css" media="all" title="LNCS"/>-->
+<!--    <link type="text/css" rel="stylesheet alternate" href="http://linked-research.270a.info/media/css/acm.css" media="all" title="ACM"/>-->
+<!--    <link type="text/css" rel="stylesheet alternate" href="http://www.w3.org/StyleSheets/TR/W3C-ED.css" media="all" title="W3C"/>-->
+<!--    <link type="text/css" rel="stylesheet" href="http://linked-research.270a.info/media/css/lr.css" media="all"/>-->
+
     <script src="js/jquery.min.js"></script>
     <script src="js/bootstrap.min.js"></script>    
 	<script src="js/script.js"></script>
-	
+
+    <script type="text/javascript" src="http://linked-research.270a.info/scripts/lr.js"></script>
+
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
       <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
@@ -24,9 +31,8 @@
     <![endif]-->
   </head>
 
-  <body>
-
-    <div class="container">
+    <body>
+        <article class="container">
 
          <!-- Static navbar -->
          <nav class="navbar navbar-default">
@@ -50,81 +56,127 @@
          </nav>
 
          <!-- topclass -->
-		<h1>${ontology.label}</h1>
-		<h3>Namespace:</h3>
-		${ontology.namespace}
-		<h3>Authors:</h3>
-		<ul style="padding: 0; list-style-type: none;">
-			<!-- <a href="${creator.homepage}">${creator.name}</a> <a href="${creator.email}" class="btn btn-danger btn-xs">Default</a> -->
-			${ontology.authors}
-		</ul>
-		<h3>Serialisations:</h3>
-			<span id="serialisation"></span>
-		<hr/>
-		
-		<h3>Abstract</h3>
-		${ontology.abstract}
-		
-		<!-- In the future we might add a functionality to transform docbooks to text, to describe ontologies -->
-		
-		<h3>Ontology Statistics</h3>
-		<!-- Here we list all classes and properties -->
-		<h5>Classes (${class.count}):</h5>
-		<p>${class.labelwithhyperlink}</p>
-		
-		<h5>Properties (${property.count}):</h5>
-		<p>${property.labelwithhyperlink}</p>
-		
-		<h5>Instances (${instances.count}):</h5>
-		<p>${instances.labelwithhyperlink}</p>
-		
-		<h3>Term Description</h3>
-		In this section, the classes and properties that provide a basis for the ${ontology.label} are described
-		
-		<h4>Classes</h4>
-		${classes}
-		<a name="#{class.id}">
-			<div class="panel panel-info">
-		  	  	<div class="panel-heading">
-		    	  	<h3 class="panel-title">${class.label}</h3>
-		  	  	</div>
-		  		<div class="panel-body">
-		    		${class.description}<br/>
-					${class.propertydomain}<br/>
-					${class.propertyrange}<br/>
-					${class.subclassof}<br/>
-					${class.subclassedby}<br/>
-		  		</div>
-			</div>
-		</a>
-		
-		<h4>Properties</h4>
-		${properties}
-		<a name="#{property.id}">
-			<div class="panel panel-warning">
-		  	  	<div class="panel-heading">
-		    	  	<h3 class="panel-title">${property.label}</h3>
-		  	  	</div>
-		  		<div class="panel-body">
-		    		${property.description}<br/>
-					${property.classdomain}<br/>
-					${property.classrange}<br/>
-					${property.subpropertyof}<br/>
-					${property.subpropertyby}
-		  		</div>
-			</div>
-		</a>
-		
-		<footer class="footer text-muted">
-			<leftalign><small>Copyright:</small></leftalign><rightalign><small>Last Updated: ${ontology.modified}</small></rightalign>
-		</footer>
+            <h1>${ontology.label}</h1>
 
-       </div> <!-- /container -->
+            <div id="authors">
+		        <dl id="author-name">
+		            <dt>Authors</dt>
+                    <dd>${ontology.authors}</dd>
+<!--           <dd id="author-1"><span about="[this:]" rel="dcterms:creator dcterms:publisher dcterms:contributor"><a about="http://csarven.ca/#i" typeof="foaf:Person" rel="foaf:homepage" property="foaf:name" href="http://csarven.ca/">Sarven Capadisli</a></span><sup><a href="#author-org-1">1</a></sup><sup><a href="#author-email-1">✊</a></sup></dd>-->
+                </dl>
 
-    
- 
+<!--            <ul id="author-org">-->
+<!--                    <li id="author-org-1"><sup>1</sup><a about="[_:UniversityofBonn]" typeof="foaf:Organization" property="foaf:name" rel="foaf:homepage" href="http://uni-bonn.de/">University of Bonn</a>, Enterprise Information Systems Department, Bonn, Germany</li>-->
+<!--            </ul>-->
 
-	
-  </body>
+<!--            <ul id="author-email">-->
+<!--                <li id="author-email-1"><sup>✊</sup><a about="http://csarven.ca/#i" rel="foaf:mbox" href="mailto:info@csarven.ca">info@csarven.ca</a></li>-->
+<!--            </ul>-->
+            </div>
+
+
+            <dl id="namespace">
+        		<dt>Namespace:</dt>
+			    <dd>${ontology.namespace}</dd>
+            </dl>
+
+            <dl id="serialisations">
+        		<dt>Serialisations</dt>
+			    <dd><span id="serialisation"></dd>
+            </dl>
+
+            <div id="content" class="entry-content">
+                <section id="abstact">
+		            <h2>Abstract</h2>
+		            <div>
+            		    <p>${ontology.abstract}</p>
+                    </div>
+                </section>
+
+		
+		        <!-- In the future we might add a functionality to transform docbooks to text, to describe ontologies -->
+		
+                <section id="ontology-statistics">
+            		<h2>Ontology Statistics</h2>
+		            <div>
+		                <!-- Here we list all classes and properties -->
+		                <section id="classes">
+	                        <h5>Classes (${class.count}):</h5>
+                            <div>
+		                        <p>${class.labelwithhyperlink}</p>
+		                    </div>
+                        </section>
+
+		                <section id="properties">
+            		        <h5>Properties (${property.count}):</h5>
+            		        <div>
+                		        <p>${property.labelwithhyperlink}</p>
+                            </div>
+                        </section>
+
+		                <section id="instances">
+            		        <h5>Instances (${instances.count}):</h5>
+                            <div>
+	                	        <p>${instances.labelwithhyperlink}</p>
+                            </div>
+                        </section>
+                    </div>
+                </section>
+
+
+                <section id="term-description">
+            		<h2>Term Description</h2>
+		            <div>		
+		                <p>In this section, the classes and properties that provide a basis for the ${ontology.label} are described.</p>
+
+                        <section id="term-description-classes">
+                    		<h3>Classes</h3>
+                            <div>
+		                        ${classes}
+		                        <a name="#{class.id}">
+			                        <div class="panel panel-info">
+		                          	  	<div class="panel-heading">
+		                            	  	<h4 class="panel-title">${class.label}</h4>
+		                          	  	</div>
+		                          		<ul class="panel-body">
+		                            		<li>${class.description}</li>
+					                        <li>${class.propertydomain}</li>
+					                        <li>${class.propertyrange}</li>
+					                        <li>${class.subclassof}</li>
+					                        <li>${class.subclassedby}</li>
+		                          		</ul>
+			                        </div>
+		                        </a>
+		                    </div>
+                        </section>
+
+                        <section id="term-description-properties">
+	                        <h3>Properties</h3>
+                            <div>
+		                        ${properties}
+		                        <a name="#{property.id}">
+			                        <div class="panel panel-warning">
+		                          	  	<div class="panel-heading">
+		                            	  	<h4 class="panel-title">${property.label}</h4>
+		                          	  	</div>
+		                          		<ul class="panel-body">
+		                            		<li>${property.description}</li>
+					                        <li>${property.classdomain}</li>
+					                        <li>${property.classrange}</li>
+					                        <li>${property.subpropertyof}</li>
+					                        <li>${property.subpropertyby}</li>
+		                          		</ul>
+			                        </div>
+		                        </a>
+		                    </div>
+                        </section>
+                    </div>
+                </section>
+            </div>
+		
+		    <footer class="footer text-muted">
+			    <leftalign><small>Copyright:</small></leftalign><rightalign><small>Last Updated: ${ontology.modified}</small></rightalign>
+		    </footer>
+        </article>
+    </body>
 </html>
-
