@@ -4,12 +4,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
-import java.util.regex.Pattern;
-
+import org.apache.commons.io.FileUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.safety.Whitelist;
-
 import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryExecution;
 import com.hp.hpl.jena.query.QueryExecutionFactory;
@@ -21,7 +18,6 @@ import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
-import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.sparql.vocabulary.FOAF;
 import com.hp.hpl.jena.vocabulary.DCTerms;
 import com.hp.hpl.jena.vocabulary.OWL;
@@ -40,9 +36,12 @@ public class Generator {
 	private static void ontologyDescription(){		
 		String queryNoAuthors = "SELECT * WHERE {"+
 					"?namespace a <" + OWL.Ontology + "> ." +
-					"?namespace <"+ RDFS.label + "> ?label ." + 
-					"?namespace <"+ RDFS.comment + "> ?abstract ." + 
-					"?namespace <"+ DCTerms.modified + "> ?modified ." + 
+					//"?namespace <"+ RDFS.label + "> ?label . " + 
+					"?namespace <"+ DCTerms.title + "> ?label . " +
+					//"?namespace <"+ RDFS.comment + "> ?abstract . " + 
+					"?namespace <"+ DCTerms.description + "> ?abstract . " + 
+					"OPTIONAL { ?namespace <"+ DCTerms.modified + "> ?modified . }" + 
+					"OPTIONAL { ?namespace <"+ OWL.versionInfo + "> ?version . }" + 
 					"}";
 		
 		Query qry = QueryFactory.create(queryNoAuthors);
@@ -52,10 +51,11 @@ public class Generator {
 	    while (rs.hasNext()){
 	    	QuerySolution sol = rs.next();
 	    	namespace = sol.get("namespace").asResource().toString();
-	    	htmlTemplate = htmlTemplate.replace("${ontology.label}", sol.get("label").asLiteral().toString());
+	    	htmlTemplate = htmlTemplate.replace("${ontology.label}", sol.get("label").asLiteral().getValue().toString());
 	    	htmlTemplate = htmlTemplate.replace("${ontology.namespace}", sol.get("namespace").asResource().toString());
-	    	htmlTemplate = htmlTemplate.replace("${ontology.abstract}", sol.get("abstract").asLiteral().toString());
-	    	htmlTemplate = htmlTemplate.replace("${ontology.modified}", sol.get("modified").asLiteral().getString());
+	    	htmlTemplate = htmlTemplate.replace("${ontology.abstract}", sol.get("abstract").asLiteral().getValue().toString());
+	    	if (sol.get("modified") != null) htmlTemplate = htmlTemplate.replace("${ontology.modified}", sol.get("modified").asLiteral().getValue().toString());
+	    	if (sol.get("versionInfo") != null) htmlTemplate = htmlTemplate.replace("${ontology.versionInfo}", sol.get("version").asLiteral().getValue().toString());
 	    }
 	    
 	    String queryAuthors = "SELECT ?name ?page ?email WHERE {"+
@@ -127,6 +127,7 @@ public class Generator {
 		classBuilder.append(classTemplate);
 	    
 	    //TODO make all fields optional
+		//TODO list all OWL Deprecated classes in a different color?
 		String queryClassDescription = "SELECT DISTINCT ?class ?label ?description WHERE {"+
 				"{ ?class a <" + RDFS.Class + "> . } UNION " +
 				"{ ?class a <" + OWL.Class + "> . } " +
@@ -149,8 +150,9 @@ public class Generator {
 	    	classTOC.append("<a data-toggle=\"tooltip\" data-original-title=\"${class.shorttip}\" href=\"#"+sol.get("class").asResource().toString().replace(namespace, "")+"\">"+sol.get("class").asResource().toString().replace(namespace, "")+"</a>");
 	    	classTOC.append(", ");
 	    	
+	    	_cb = _cb.replace("${class.uri}", sol.get("class").asResource().toString());
 	    	_cb = _cb.replace("${class.anchor}",sol.get("class").asResource().toString().replace(namespace, ""));
-	    	_cb = _cb.replace("${class.label}", sol.get("label").asLiteral().toString());
+	    	_cb = _cb.replace("${class.label}", sol.get("label").asLiteral().getValue().toString());
 	    	_cb = _cb.replace("${class.description}", sol.get("description").asLiteral().toString());
 	    	_cb = _cb.replace("${class.propertydomain}", createClassPropertyDomain(sol.get("class").asResource().toString()));
 	    	_cb = _cb.replace("${class.propertyrange}", createClassPropertyRange(sol.get("class").asResource().toString()));
@@ -280,6 +282,8 @@ public class Generator {
 		String propertyTemplate = htmlTemplateDoc.getElementById("propertyTemplate").outerHtml();
 	    propertyBuilder.append(propertyTemplate);
 	    
+		//TODO list all OWL properties classes in a different color?
+
 		String queryClassDescription = "SELECT DISTINCT *  WHERE {"+
 				"{ ?class a <" + RDF.Property + "> . } UNION " +
 				"{ ?class a <" + OWL.DatatypeProperty + "> . } UNION " +
@@ -305,14 +309,20 @@ public class Generator {
 	    	String _cb = propertyBuilder.toString();
 	    	
 	    	QuerySolution sol = rs.next();
+	    	
+	    	if (!(sol.get("class").asResource().toString().startsWith(namespace)))
+	    		continue; // we do not want to republish stuff which is already published somewhere else
+	    	
 	    	propertiesTOC.append("<a href=\"#"+sol.get("class").asResource().toString().replace(namespace, "")+"\">"+sol.get("class").asResource().toString().replace(namespace, "")+"</a>");
 	    	propertiesTOC.append(", ");
 	    	
-	    	_cb = _cb.replace("${property.anchor}", sol.get("class").asResource().toString().replace(namespace, ""));
-	    	_cb = _cb.replace("${property.label}", sol.get("label").asLiteral().toString());
+	    	_cb = _cb.replace("${property.uri}", sol.get("class").asResource().toString());
+	    	if (sol.get("label") != null) _cb = _cb.replace("${property.label}", sol.get("label").asLiteral().getValue().toString());
+	    	else _cb = _cb.replace("${property.label}",sol.get("class").asResource().toString().replace(namespace, ""));
+	    		
 	    	_cb = _cb.replace("${property.types}", createPropertyTypes(sol.get("class").asResource().toString()));
 	    	
-	    	if (sol.get("description") != null) _cb = _cb.replace("${property.description}", sol.get("description").asLiteral().toString());
+	    	if (sol.get("description") != null) _cb = _cb.replace("${property.description}", sol.get("description").asLiteral().getValue().toString());
 	    	else _cb = _cb.replace("${property.description}","");
 
 	    	if (sol.get("domain") != null) _cb = _cb.replace("${property.classdomain}", createHTMLResource(sol.get("domain").asResource().toString()));
@@ -394,6 +404,7 @@ public class Generator {
 				+ "MINUS { ?res a <" + RDFS.Class + "> . }  " 
 				+ "MINUS { ?res a <" + OWL.Class + "> . } " 
 				+ "MINUS { ?res a <" + OWL.Ontology + "> } ." 
+				+ "MINUS { ?res a <" + OWL.DeprecatedClass + "> } ." 
 				+ "}";
 		
 		
@@ -426,10 +437,24 @@ public class Generator {
 	}
 	
 	public static void main(String [] args) throws IOException{
-//		ontology.read(args[0]); 
-		ontology.read("/Users/jeremy/Sites/ontologies/daq/daq.ttl");
 		
-		File f = new File("/Users/jeremy/Sites/ontologies/daq/daq.ttl");
+		String sparqlQuerystring = "SELECT ?s where {?s ?p ?o} LIMIT 1";
+		Query query = QueryFactory.create(sparqlQuerystring);
+
+		QueryExecution qexec = QueryExecutionFactory.sparqlService("http://example.org", query);
+
+		ResultSet results = qexec.execSelect();
+
+		if (results.hasNext())
+		{}		else
+		{
+		}
+		qexec.close();
+		
+//		ontology.read(args[0]); 
+		ontology.read("/Users/jeremy/Downloads/ns-2");
+		
+		File f = new File("/Users/jeremy/Downloads/ns-2");
 		String asciidoc = f.getName();
 		
 		int pos = asciidoc.lastIndexOf(".");
@@ -457,7 +482,10 @@ public class Generator {
 		Document cleaned = Jsoup.parse(htmlTemplate);
 		cleaned.outputSettings().prettyPrint(true).indentAmount(3).outline(true);
 		
-	    System.out.println(cleaned.html());
+		File outputFile = new File("/Users/jeremy/Sites/ontologies/sioc.html");
+	    FileUtils.writeStringToFile(outputFile, cleaned.outerHtml(), "UTF-8");
+		
+	    //System.out.println(cleaned.html());
 
 	}
 }
