@@ -437,20 +437,6 @@ public class Generator {
 	}
 	
 	public static void main(String [] args) throws IOException{
-		
-		String sparqlQuerystring = "SELECT ?s where {?s ?p ?o} LIMIT 1";
-		Query query = QueryFactory.create(sparqlQuerystring);
-
-		QueryExecution qexec = QueryExecutionFactory.sparqlService("http://example.org", query);
-
-		ResultSet results = qexec.execSelect();
-
-		if (results.hasNext())
-		{}		else
-		{
-		}
-		qexec.close();
-		
 //		ontology.read(args[0]); 
 		ontology.read("/Users/jeremy/Downloads/ns-2");
 		
@@ -463,7 +449,7 @@ public class Generator {
 		}
 		
 		
-		String tmp = "/Users/jeremy/Sites/ontologies/template.html";//Generator.class.getResource("template.html").getFile();
+		String tmp = "/Users/jeremy/Sites/ontologies/linkedresearch.html";//Generator.class.getResource("template.html").getFile();
 //		htmlTemplate = com.google.common.io.Files.toString(new File(tmp), Charset.defaultCharset());
 		
 		
@@ -482,7 +468,7 @@ public class Generator {
 		Document cleaned = Jsoup.parse(htmlTemplate);
 		cleaned.outputSettings().prettyPrint(true).indentAmount(3).outline(true);
 		
-		File outputFile = new File("/Users/jeremy/Sites/ontologies/sioc.html");
+		File outputFile = new File("/Users/jeremy/Sites/ontologies/ldr.html");
 	    FileUtils.writeStringToFile(outputFile, cleaned.outerHtml(), "UTF-8");
 		
 	    //System.out.println(cleaned.html());
