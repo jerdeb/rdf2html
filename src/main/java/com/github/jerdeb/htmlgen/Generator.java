@@ -3,10 +3,16 @@ package com.github.jerdeb.htmlgen;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringReader;
 import java.nio.charset.Charset;
 import java.util.List;
 
+import org.apache.commons.cli.BasicParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
 import org.apache.commons.io.FileUtils;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
@@ -47,10 +53,10 @@ public class Generator {
 	private static void ontologyDescription(){		
 		String queryNoAuthors = "SELECT * WHERE {"+
 					"?namespace a <" + OWL.Ontology + "> ." +
-					//"?namespace <"+ RDFS.label + "> ?label . " + 
-					"?namespace <"+ DCTerms.title + "> ?label . " +
-					//"?namespace <"+ RDFS.comment + "> ?abstract . " + 
-					"?namespace <"+ DCTerms.description + "> ?abstract . " + 
+					"{ ?namespace <"+ RDFS.label + "> ?label . } UNION" + 
+					"{ ?namespace <"+ DCTerms.title + "> ?label . } " +
+					"{ ?namespace <"+ RDFS.comment + "> ?abstract . } UNION " + 
+					"{ ?namespace <"+ DCTerms.description + "> ?abstract .} " + 
 					"OPTIONAL { ?namespace <"+ DCTerms.modified + "> ?modified . }" + 
 					"OPTIONAL { ?namespace <"+ OWL.versionInfo + "> ?version . }" + 
 					"}";
@@ -271,6 +277,9 @@ public class Generator {
 		String qn = ontology.qnameFor(resource);
 		if (qn == null){
 			qn = pfx.qnameFor(resource);
+			if (qn == null) {
+				qn = resource.replace(namespace, "");
+			}
 		}
 		
 		if (resource.contains(namespace)) ret = "<a href=\"#"+resource.replace(namespace, "")+"\">"+qn+"</a>";
@@ -451,42 +460,80 @@ public class Generator {
 		
 	}
 	
+	@SuppressWarnings("static-access")
 	public static void main(String [] args) throws IOException{
-//		ontology.read(args[0]); 
-		ontology.read("/Users/jeremy/Downloads/ns-2");
+		Options options = new Options();
+        
+		Option input = OptionBuilder.withArgName("filename").hasArgs(1).withDescription("Ontology Location").create("i");
+		input.setRequired(true);
+		options.addOption(input);
 		
-		File f = new File("/Users/jeremy/Downloads/ns-2");
-		String asciidoc = f.getName();
-		
-		int pos = asciidoc.lastIndexOf(".");
-		if (pos > 0) {
-			asciidoc = asciidoc.substring(0, pos)+".adoc";
-		}
-		
-		
-		String tmp = "/Users/jeremy/Sites/ontologies/template.html";//Generator.class.getResource("template.html").getFile();
-//		htmlTemplate = com.google.common.io.Files.toString(new File(tmp), Charset.defaultCharset());
-		
-		
-		htmlTemplateDoc = Jsoup.parse(new File(tmp), Charset.defaultCharset().toString());
-		htmlTemplateDoc.outputSettings().prettyPrint(true).indentAmount(0);
+		Option output = OptionBuilder.withArgName("filename").hasArgs(1).withDescription("Output Location").create("o");
+		output.setRequired(true);	
+        options.addOption(output);
+        
+		Option template = OptionBuilder.withArgName("filename").hasArgs(1).withDescription("Template Location").create("t");
+		template.setRequired(false);	
+        options.addOption(template);
+        
+		Option help = OptionBuilder.withArgName("").hasArgs(1).withDescription("Help").create("h");
+		template.setRequired(false);	
+        options.addOption(help);
+        
+        CommandLineParser parser = new BasicParser();
+        HelpFormatter formatter = new HelpFormatter();
+        CommandLine cmd = null;
+        try {
+                cmd = parser.parse(options, args,true);
+                if (cmd.hasOption("h") || cmd.hasOption("help")) {
+                    formatter.printHelp(80," ","RDF2HTML Generation \n", options,"\nFeedback and comments are welcome",true );
+                    System.exit(0);
+                }
+                
+                // read ontology
+                System.out.println("Reading Template...");
+                ontology.read(cmd.getOptionValue("i"));
+                File f = new File(cmd.getOptionValue("i"));
+        		String asciidoc = f.getName();
+        		
+        		int pos = asciidoc.lastIndexOf(".");
+        		if (pos > 0) {
+        			asciidoc = asciidoc.substring(0, pos)+".adoc";
+        		}
+        		
+        		//load template
+        		System.out.println("Loading Template...");
+        		String tmp = Generator.class.getResource("/template.html").getFile();
+        		if (cmd.getOptionValue("t") != null)
+        			tmp = cmd.getOptionValue("t");
+        		
+        		htmlTemplateDoc = Jsoup.parse(new File(tmp), Charset.defaultCharset().toString());
+        		htmlTemplateDoc.outputSettings().prettyPrint(true).indentAmount(0);
 
-		
-		htmlTemplate = htmlTemplateDoc.html();
-		htmlTemplate =  htmlTemplate.replace("${asciidoc.path}", asciidoc);
-		
-		ontologyDescription();
-		classDescription();
-		propertyDescription();
-		instanceDescriptions();
-		
-		Document cleaned = Jsoup.parse(htmlTemplate);
-		cleaned.outputSettings().prettyPrint(true).indentAmount(3).outline(true);
-		
-		File outputFile = new File("/Users/jeremy/Sites/ontologies/ldr2.html");
-	    FileUtils.writeStringToFile(outputFile, cleaned.outerHtml(), "UTF-8");
-		
-	    //System.out.println(cleaned.html());
-
+        		
+        		htmlTemplate = htmlTemplateDoc.html();
+        		htmlTemplate =  htmlTemplate.replace("${asciidoc.path}", asciidoc);
+        		
+        		System.out.println("Creating Descriptions...");
+        		ontologyDescription();
+        		classDescription();
+        		propertyDescription();
+        		instanceDescriptions();
+        		
+        		Document cleaned = Jsoup.parse(htmlTemplate);
+        		cleaned.outputSettings().prettyPrint(true).indentAmount(3).outline(true);
+        		
+        		//save file
+        		File outputFile = new File(cmd.getOptionValue("o"));
+        	    FileUtils.writeStringToFile(outputFile, cleaned.outerHtml(), "UTF-8");
+        	    System.out.println("File Saved. Finished");
+        	    
+        } catch (org.apache.commons.cli.ParseException e) {
+            formatter.printHelp(80," ","ERROR: "+e.getMessage()+"\n", options,"\nError occured! Please see the error message above",true );
+            System.exit(-1);
+        } catch (NumberFormatException e) {
+            formatter.printHelp(80," ","ERROR: "+e.getMessage()+"\n", options,"\nError occured! Please see the error message above",true );
+            System.exit(-1);
+        }
 	}
 }
