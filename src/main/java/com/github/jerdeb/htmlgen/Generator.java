@@ -2,11 +2,17 @@ package com.github.jerdeb.htmlgen;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringReader;
 import java.nio.charset.Charset;
 import java.util.List;
+
 import org.apache.commons.io.FileUtils;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFDataMgr;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+
 import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryExecution;
 import com.hp.hpl.jena.query.QueryExecutionFactory;
@@ -32,6 +38,11 @@ public class Generator {
 	
 	private static String namespace = "";
 
+	private static Model pfx = ModelFactory.createDefaultModel();
+	static {
+		InputStream in = Generator.class.getResourceAsStream("/known_prefixes.jsonld");
+		RDFDataMgr.read(pfx, in, null, Lang.JSONLD);
+	}
 	
 	private static void ontologyDescription(){		
 		String queryNoAuthors = "SELECT * WHERE {"+
@@ -170,7 +181,6 @@ public class Generator {
 	    htmlTemplate = htmlTemplate.replace(classTemplate, allClasses.toString());
 	}
 	
-	
 	private static String createClassPropertyDomain(String classURI){
 		Resource cls = ontology.createResource(classURI);
 		Property dom = ontology.createProperty(RDFS.domain.getURI());
@@ -257,15 +267,23 @@ public class Generator {
 	
 	private static String createHTMLResource(String resource){
 		String ret = "";
-		if (resource.contains(namespace)) ret = "<a href=\"#"+resource.replace(namespace, "")+"\">"+ontology.qnameFor(resource)+"</a>";
-		else ret = "<a target=\"_blank\" class=\"text-warning\" href=\""+resource+"\">"+ontology.qnameFor(resource)+"</a>";
+
+		String qn = ontology.qnameFor(resource);
+		if (qn == null){
+			qn = pfx.qnameFor(resource);
+		}
+		
+		if (resource.contains(namespace)) ret = "<a href=\"#"+resource.replace(namespace, "")+"\">"+qn+"</a>";
+		else ret = "<a target=\"_blank\" class=\"text-warning\" href=\""+resource+"\">"+qn+"</a>";
 
 		return ret;
 	}
 	
 	private static void propertyDescription(){
 		String queryClassCount = "SELECT (COUNT(DISTINCT ?property) as ?count) WHERE {"+
-				"?property a <" + RDF.Property + "> . " +
+				"{ ?property a <" + RDF.Property + "> . } UNION " +
+				"{ ?property a <" + OWL.DatatypeProperty + "> . } UNION " +
+				"{ ?property a <" + OWL.ObjectProperty + "> . } " +
 				"}";
 		
 		Query qry = QueryFactory.create(queryClassCount);
@@ -323,14 +341,14 @@ public class Generator {
 	    	_cb = _cb.replace("${property.types}", createPropertyTypes(sol.get("class").asResource().toString()));
 	    	
 	    	if (sol.get("description") != null) _cb = _cb.replace("${property.description}", sol.get("description").asLiteral().getValue().toString());
-	    	else _cb = _cb.replace("${property.description}","");
+	    	else _cb = _cb.replace("${property.description}","<del>");
 
 	    	if (sol.get("domain") != null) _cb = _cb.replace("${property.classdomain}", createHTMLResource(sol.get("domain").asResource().toString()));
-	    	else _cb = _cb.replace("${property.classdomain}", "-");
+	    	else _cb = _cb.replace("${property.classdomain}", "<del>");
 
 	    	
 	    	if (sol.get("range") != null) _cb = _cb.replace("${property.classrange}", createHTMLResource(sol.get("range").asResource().toString()));
-	    	else _cb = _cb.replace("${property.classrange}", "-");
+	    	else _cb = _cb.replace("${property.classrange}", "<del>");
 	    		
 	    	if (sol.get("mincardinality") != null) _cb = _cb.replace("${property.mincardinality}", String.valueOf(sol.get("mincardinality").asLiteral().getInt()));
 	    	else _cb = _cb.replace("${property.mincardinality}","<del>");
@@ -389,9 +407,6 @@ public class Generator {
 			sb.append("<del>");
 		}
 		
-
-		
-		
 		return sb.toString();
 	}
 	
@@ -449,7 +464,7 @@ public class Generator {
 		}
 		
 		
-		String tmp = "/Users/jeremy/Sites/ontologies/linkedresearch.html";//Generator.class.getResource("template.html").getFile();
+		String tmp = "/Users/jeremy/Sites/ontologies/template.html";//Generator.class.getResource("template.html").getFile();
 //		htmlTemplate = com.google.common.io.Files.toString(new File(tmp), Charset.defaultCharset());
 		
 		
@@ -468,7 +483,7 @@ public class Generator {
 		Document cleaned = Jsoup.parse(htmlTemplate);
 		cleaned.outputSettings().prettyPrint(true).indentAmount(3).outline(true);
 		
-		File outputFile = new File("/Users/jeremy/Sites/ontologies/ldr.html");
+		File outputFile = new File("/Users/jeremy/Sites/ontologies/ldr2.html");
 	    FileUtils.writeStringToFile(outputFile, cleaned.outerHtml(), "UTF-8");
 		
 	    //System.out.println(cleaned.html());
