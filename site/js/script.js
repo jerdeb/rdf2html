@@ -15,7 +15,7 @@ $(document).ready(function() {
 		
 		serialisation = data['serialisations'];
 		$.each(serialisation, function(item) {
-			ser = ser.concat("<span class='label label-primary'>"+serialisation[item]+"</span>&nbsp;");
+			ser = ser.concat("<a class='label label-primary' href='"+negotiate(serialisation[item])+"'>"+serialisation[item]+"</a>&nbsp;");
 		})
 		$("#serialisation").html(ser);
 		
@@ -41,4 +41,15 @@ function loadFile(path)
 	}).responseText;
 	
 	return stringData;
+}
+
+function negotiate(serialisation){
+	var str = document.URL;
+	str = str.replace(".html","");
+	if (serialisation == "rdf/xml")
+		return str+".rdf";
+	if (serialisation == "turtle")
+		return str+".ttl";
+	
+	//TODO more serialisations
 }
