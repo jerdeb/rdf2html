@@ -1,7 +1,7 @@
 var menulinks = "";
 var ser = "";
 $(document).ready(function() {
-	$.getJSON( "params.json", function( data ) {
+	$.getJSON( "../params.json", function( data ) {
 		// load footer items
 		$("#title").text(data['topbar']['title']);
 		$("#menutitle").text(data['topbar']['title']);
