@@ -343,6 +343,8 @@ public class Generator {
 	    	propertiesTOC.append("<a href=\"#"+sol.get("class").asResource().toString().replace(namespace, "")+"\">"+sol.get("class").asResource().toString().replace(namespace, "")+"</a>");
 	    	propertiesTOC.append(", ");
 	    	
+	    	_cb = _cb.replace("${property.anchor}",sol.get("class").asResource().toString().replace(namespace, ""));
+
 	    	_cb = _cb.replace("${property.uri}", sol.get("class").asResource().toString());
 	    	if (sol.get("label") != null) _cb = _cb.replace("${property.label}", sol.get("label").asLiteral().getValue().toString());
 	    	else _cb = _cb.replace("${property.label}",sol.get("class").asResource().toString().replace(namespace, ""));
