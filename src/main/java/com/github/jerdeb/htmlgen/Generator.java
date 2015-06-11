@@ -18,6 +18,10 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.semarglproject.jena.core.sink.JenaSink;
+import org.semarglproject.jena.rdf.rdfa.JenaRdfaReader;
+import org.semarglproject.rdf.rdfa.RdfaParser;
+import org.semarglproject.source.StreamProcessor;
 
 import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryExecution;
@@ -27,6 +31,7 @@ import com.hp.hpl.jena.query.QuerySolution;
 import com.hp.hpl.jena.query.ResultSet;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.NodeIterator;
 import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
@@ -75,10 +80,10 @@ public class Generator {
 	    	if (sol.get("versionInfo") != null) htmlTemplate = htmlTemplate.replace("${ontology.versionInfo}", sol.get("version").asLiteral().getValue().toString());
 	    }
 	    
-	    String queryAuthors = "SELECT ?name ?page ?email WHERE {"+
+	    String queryAuthors = "SELECT ?name ?page ?email ?atr WHERE {"+
 				"?namespace a <" + OWL.Ontology + "> ." +
 				"?namespace <"+ DCTerms.creator + "> ?atr ." +
-				"?atr <" + FOAF.name + "> ?name ."+
+				"OPTIONAL {?atr <" + FOAF.name + "> ?name .}"+
 				"OPTIONAL {?atr <" + FOAF.homepage + "> ?page . }"+
 				"OPTIONAL {?atr <" + FOAF.mbox + "> ?email . }"+
 				"}";
@@ -91,9 +96,58 @@ public class Generator {
 
 	    while (rs.hasNext()){
 	    	QuerySolution sol = rs.next();
-	    	String name = sol.get("name").asLiteral().toString();
-	    	String page = (sol.get("page") != null) ? sol.get("page").asResource().toString() : "";
-	    	String email = (sol.get("email") != null) ? sol.get("email").asResource().toString() : "";
+	    	
+	    	String name = "";
+	    	String page = "";
+	    	String email = "";
+	    	if (sol.get("name") != null){
+	    		name = sol.get("name").asLiteral().toString();
+	    		page = (sol.get("page") != null) ? sol.get("page").asResource().toString() : "";
+	    		email = (sol.get("email") != null) ? sol.get("email").asResource().toString() : "";
+	    	} else if (sol.get("atr").isURIResource()){
+	    		//let us try to fetch the resource
+	    		String extURI = sol.get("atr").asNode().toString();
+	    		Model ext = ModelFactory.createDefaultModel();
+	    		
+	    		StreamProcessor streamProcessor = new StreamProcessor(RdfaParser.connect(JenaSink.connect(ext)));
+
+	    		try{
+//	    			ext = RDFDataMgr.loadModel(extURI);
+	    			streamProcessor.process(extURI);
+	    		}catch (Exception e){
+	    			//log that model could not be loaded
+	    			System.out.println(e.getMessage());
+	    			ext = ModelFactory.createDefaultModel(); //remove error messages
+	    		}
+	    		
+	    		if (ext.size() > 0){
+	    			
+	    			List<Resource> foafPerson = ext.listSubjectsWithProperty(RDF.type, FOAF.Person).toList();
+	    			for(Resource person : foafPerson){
+	    				NodeIterator iter = ext.listObjectsOfProperty(person, FOAF.name);
+	    				String extName = (iter.hasNext()) ? iter.next().asLiteral().getString(): null;
+	    				name = "<a href='"+extURI+"'>" + ((extName != null) ?  extName : extURI) + "</a>" ;
+	    				
+	    				iter = ext.listObjectsOfProperty(person, FOAF.homepage);
+	    				String extPage = (iter.hasNext()) ? iter.next().asNode().toString() : null;
+			    	    page = (extPage != null) ? extPage : "";
+			    	    
+	    				iter = ext.listObjectsOfProperty(person, FOAF.mbox);
+	    				String extEmail = (iter.hasNext()) ? iter.next().asNode().toString() : null;
+	    				email = (extEmail != null) ? extEmail : "";
+
+			    	    
+	    			}
+	    		} else {
+		    		name = sol.get("atr").asNode().toString();
+		    		page = (sol.get("page") != null) ? sol.get("page").asResource().toString() : "";
+		    		email = (sol.get("email") != null) ? sol.get("email").asResource().toString() : "";
+	    		}
+	    	} else {
+	    		name = sol.get("atr").asNode().toString();
+	    		page = (sol.get("page") != null) ? sol.get("page").asResource().toString() : "";
+	    		email = (sol.get("email") != null) ? sol.get("email").asResource().toString() : "";
+	    	}
 	    	
 	    	sb.append("<li>");
 	    	if (!(page.equals(""))){

@@ -43,6 +43,37 @@
 			<version>1.2</version>
 		</dependency>
 		
+		<dependency>
+		    <groupId>org.semarglproject</groupId>
+		    <artifactId>semargl-rdfa</artifactId>
+		    <version>0.6.1</version>
+		    <exclusions>
+		    	<exclusion>
+		    		<groupId>org.apache.jena</groupId>
+		    		<artifactId>jena-arq</artifactId>
+		    	</exclusion>
+		    	<exclusion>
+		    		<groupId>org.apache.jena</groupId>
+		    		<artifactId>jena-core</artifactId>
+		    	</exclusion>
+		    </exclusions>
+		</dependency>
+		<dependency>
+			<groupId>com.github.ansell.semargl</groupId>
+			<artifactId>semargl-jena</artifactId>
+			<version>0.5</version>
+			<exclusions>
+		    	<exclusion>
+		    		<groupId>org.apache.jena</groupId>
+		    		<artifactId>jena-arq</artifactId>
+		    	</exclusion>
+		    	<exclusion>
+		    		<groupId>org.apache.jena</groupId>
+		    		<artifactId>jena-core</artifactId>
+		    	</exclusion>
+		    </exclusions>
+		</dependency>
+		
 	</dependencies>
 	
 <build>  
