@@ -36,6 +36,7 @@ import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.sparql.vocabulary.FOAF;
+import com.hp.hpl.jena.vocabulary.DC;
 import com.hp.hpl.jena.vocabulary.DCTerms;
 import com.hp.hpl.jena.vocabulary.OWL;
 import com.hp.hpl.jena.vocabulary.RDF;
@@ -61,7 +62,7 @@ public class Generator {
 					"{ ?namespace <"+ RDFS.label + "> ?label . } UNION" + 
 					"{ ?namespace <"+ DCTerms.title + "> ?label . } " +
 					"{ ?namespace <"+ RDFS.comment + "> ?abstract . } UNION " + 
-					"{ ?namespace <"+ DCTerms.description + "> ?abstract .} " + 
+					"{ ?namespace <"+ DC.description + "> ?abstract .} " + 
 					"OPTIONAL { ?namespace <"+ DCTerms.modified + "> ?modified . }" + 
 					"OPTIONAL { ?namespace <"+ OWL.versionInfo + "> ?version . }" + 
 					"}";
@@ -369,7 +370,8 @@ public class Generator {
 		String queryClassDescription = "SELECT DISTINCT *  WHERE {"+
 				"{ ?class a <" + RDF.Property + "> . } UNION " +
 				"{ ?class a <" + OWL.DatatypeProperty + "> . } UNION " +
-				"{ ?class a <" + OWL.ObjectProperty + "> . } " +
+				"{ ?class a <" + OWL.ObjectProperty + "> . } UNION " +
+				"{ ?property a <" + OWL.DeprecatedProperty + "> . } " +
 				"OPTIONAL {?class <" + RDFS.label + "> ?label.}  " +
 				"OPTIONAL {?class <" + RDFS.comment + "> ?description.}  " +
 				"OPTIONAL {?class <" + RDFS.domain + "> ?domain.}  " +
@@ -482,6 +484,7 @@ public class Generator {
 				+ "MINUS { ?res a <" + RDF.Property + "> . }  " 
 				+ "MINUS { ?res a <" + OWL.DatatypeProperty + "> . }  " 
 				+ "MINUS { ?res a <" + OWL.ObjectProperty + "> . }"
+				+ "MINUS { ?res a <" + OWL.DeprecatedProperty + "> . }"
 				+ "MINUS { ?res a <" + RDFS.Class + "> . }  " 
 				+ "MINUS { ?res a <" + OWL.Class + "> . } " 
 				+ "MINUS { ?res a <" + OWL.Ontology + "> } ." 
