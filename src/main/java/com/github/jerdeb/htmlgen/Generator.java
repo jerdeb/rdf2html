@@ -371,7 +371,7 @@ public class Generator {
 				"{ ?class a <" + RDF.Property + "> . } UNION " +
 				"{ ?class a <" + OWL.DatatypeProperty + "> . } UNION " +
 				"{ ?class a <" + OWL.ObjectProperty + "> . } UNION " +
-				"{ ?property a <" + OWL.DeprecatedProperty + "> . } " +
+				"{ ?class a <" + OWL.DeprecatedProperty + "> . } " +
 				"OPTIONAL {?class <" + RDFS.label + "> ?label.}  " +
 				"OPTIONAL {?class <" + RDFS.comment + "> ?description.}  " +
 				"OPTIONAL {?class <" + RDFS.domain + "> ?domain.}  " +
