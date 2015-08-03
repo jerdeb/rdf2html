@@ -346,7 +346,8 @@ public class Generator {
 		String queryClassCount = "SELECT (COUNT(DISTINCT ?property) as ?count) WHERE {"+
 				"{ ?property a <" + RDF.Property + "> . } UNION " +
 				"{ ?property a <" + OWL.DatatypeProperty + "> . } UNION " +
-				"{ ?property a <" + OWL.ObjectProperty + "> . } " +
+				"{ ?property a <" + OWL.ObjectProperty + "> . } UNION " +
+				"{ ?property a <" + OWL.DeprecatedProperty + "> . } " +
 				"}";
 		
 		Query qry = QueryFactory.create(queryClassCount);
