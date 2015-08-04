@@ -4,7 +4,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
@@ -19,7 +21,6 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.semarglproject.jena.core.sink.JenaSink;
-import org.semarglproject.jena.rdf.rdfa.JenaRdfaReader;
 import org.semarglproject.rdf.rdfa.RdfaParser;
 import org.semarglproject.source.StreamProcessor;
 
@@ -49,12 +50,19 @@ public class Generator {
 	private static Document htmlTemplateDoc;
 	
 	private static String namespace = "";
+	
+	private static Map<String, Integer> minCardinality = new HashMap<String, Integer>();
+	private static Map<String, Integer> maxCardinality = new HashMap<String, Integer>();
+	private static Map<String, Integer> cardinality = new HashMap<String, Integer>();
+
 
 	private static Model pfx = ModelFactory.createDefaultModel();
 	static {
 		InputStream in = Generator.class.getResourceAsStream("/known_prefixes.jsonld");
 		RDFDataMgr.read(pfx, in, null, Lang.JSONLD);
 	}
+	
+	//TODO: handle different languages
 	
 	private static void ontologyDescription(){		
 		String queryNoAuthors = "SELECT * WHERE {"+
@@ -74,11 +82,11 @@ public class Generator {
 	    while (rs.hasNext()){
 	    	QuerySolution sol = rs.next();
 	    	namespace = sol.get("namespace").asResource().toString();
-	    	htmlTemplate = htmlTemplate.replace("${ontology.label}", sol.get("label").asLiteral().getValue().toString());
+	    	htmlTemplate = htmlTemplate.replace("${ontology.label}", sol.get("label").asLiteral().getString());
 	    	htmlTemplate = htmlTemplate.replace("${ontology.namespace}", sol.get("namespace").asResource().toString());
-	    	htmlTemplate = htmlTemplate.replace("${ontology.abstract}", sol.get("abstract").asLiteral().getValue().toString());
-	    	if (sol.get("modified") != null) htmlTemplate = htmlTemplate.replace("${ontology.modified}", sol.get("modified").asLiteral().getValue().toString());
-	    	if (sol.get("versionInfo") != null) htmlTemplate = htmlTemplate.replace("${ontology.versionInfo}", sol.get("version").asLiteral().getValue().toString());
+	    	htmlTemplate = htmlTemplate.replace("${ontology.abstract}", sol.get("abstract").asLiteral().getString());
+	    	if (sol.get("modified") != null) htmlTemplate = htmlTemplate.replace("${ontology.modified}", sol.get("modified").asLiteral().getString());
+	    	if (sol.get("versionInfo") != null) htmlTemplate = htmlTemplate.replace("${ontology.versionInfo}", sol.get("version").asLiteral().getString());
 	    }
 	    
 	    String queryAuthors = "SELECT ?name ?page ?email ?atr WHERE {"+
@@ -102,7 +110,7 @@ public class Generator {
 	    	String page = "";
 	    	String email = "";
 	    	if (sol.get("name") != null){
-	    		name = sol.get("name").asLiteral().toString();
+	    		name = sol.get("name").asLiteral().getValue().toString();
 	    		page = (sol.get("page") != null) ? sol.get("page").asResource().toString() : "";
 	    		email = (sol.get("email") != null) ? sol.get("email").asResource().toString() : "";
 	    	} else if (sol.get("atr").isURIResource()){
@@ -224,8 +232,8 @@ public class Generator {
 	    	
 	    	_cb = _cb.replace("${class.uri}", sol.get("class").asResource().toString());
 	    	_cb = _cb.replace("${class.anchor}",sol.get("class").asResource().toString().replace(namespace, ""));
-	    	_cb = _cb.replace("${class.label}", sol.get("label").asLiteral().getValue().toString());
-	    	_cb = _cb.replace("${class.description}", sol.get("description").asLiteral().toString());
+	    	_cb = _cb.replace("${class.label}", sol.get("label").asLiteral().getString());
+	    	_cb = _cb.replace("${class.description}", sol.get("description").asLiteral().getValue().toString());
 	    	_cb = _cb.replace("${class.propertydomain}", createClassPropertyDomain(sol.get("class").asResource().toString()));
 	    	_cb = _cb.replace("${class.propertyrange}", createClassPropertyRange(sol.get("class").asResource().toString()));
 	    	_cb = _cb.replace("${class.subclassof}", createClassSubClassOf(sol.get("class").asResource().toString()));
@@ -240,6 +248,40 @@ public class Generator {
 	    classTOC.deleteCharAt(classTOC.lastIndexOf(","));
 	    htmlTemplate = htmlTemplate.replace("${classes.label}", classTOC.toString());
 	    htmlTemplate = htmlTemplate.replace(classTemplate, allClasses.toString());
+	    
+	    // Get class restrictions
+	    // TODO add more owl restrictions
+	    String queryClassRestrictions = "SELECT DISTINCT * WHERE {"+
+				"{ ?class a <" + RDFS.Class + "> . } UNION " +
+				"{ ?class a <" + OWL.Class + "> . } " +
+				"?class <" + RDFS.subClassOf + "> ?restriction.  " +
+				"?restriction a <" + OWL.Restriction + ">  . " +
+				"?restriction <" + OWL.onProperty + "> ?property .  " +
+				"OPTIONAL {?restriction <" + OWL.minCardinality + "> ?minCardinality.  }" +
+				"OPTIONAL {?restriction <" + OWL.maxCardinality + "> ?maxCardinality.  }" +
+				"OPTIONAL {?restriction <" + OWL.hasValue + "> ?hasValue.  }" +
+				"OPTIONAL {?restriction <" + OWL.cardinality + "> ?cardinality.  }" +
+				"}";
+		
+		qry = QueryFactory.create(queryClassRestrictions);
+	    qe = QueryExecutionFactory.create(qry, ontology);
+	    rs = qe.execSelect();
+	    
+	    while (rs.hasNext()){
+	    	QuerySolution sol = rs.next();
+	    	
+	    	if (sol.get("minCardinality") != null) {
+	    		minCardinality.put(sol.get("property").asResource().getURI(), sol.get("minCardinality").asLiteral().getInt());
+	    	}
+	    	
+	    	if (sol.get("maxCardinality") != null) {
+	    		maxCardinality.put(sol.get("property").asResource().getURI(), sol.get("maxCardinality").asLiteral().getInt());
+	    	}
+	    	
+	    	if (sol.get("cardinality") != null) {
+	    		cardinality.put(sol.get("property").asResource().getURI(), sol.get("cardinality").asLiteral().getInt());
+	    	}
+	    }
 	}
 	
 	private static String createClassPropertyDomain(String classURI){
@@ -376,8 +418,6 @@ public class Generator {
 				"OPTIONAL {?class <" + RDFS.comment + "> ?description.}  " +
 				"OPTIONAL {?class <" + RDFS.domain + "> ?domain.}  " +
 				"OPTIONAL {?class <" + RDFS.range + "> ?range.}  " +
-				"OPTIONAL {?class <" + OWL.minCardinality + "> ?mincardinality.  }" +
-				"OPTIONAL {?class <" + OWL.maxCardinality + "> ?maxcardinality.  }" +
 				"OPTIONAL {?class <" + OWL.inverseOf + "> ?inverse.  }" +
 				"OPTIONAL {?class <" + RDFS.subPropertyOf + "> ?subpropertyof.  }" +
 				"}";
@@ -403,12 +443,12 @@ public class Generator {
 	    	_cb = _cb.replace("${property.anchor}",sol.get("class").asResource().toString().replace(namespace, ""));
 
 	    	_cb = _cb.replace("${property.uri}", sol.get("class").asResource().toString());
-	    	if (sol.get("label") != null) _cb = _cb.replace("${property.label}", sol.get("label").asLiteral().getValue().toString());
+	    	if (sol.get("label") != null) _cb = _cb.replace("${property.label}", sol.get("label").asLiteral().getString());
 	    	else _cb = _cb.replace("${property.label}",sol.get("class").asResource().toString().replace(namespace, ""));
 	    		
 	    	_cb = _cb.replace("${property.types}", createPropertyTypes(sol.get("class").asResource().toString()));
 	    	
-	    	if (sol.get("description") != null) _cb = _cb.replace("${property.description}", sol.get("description").asLiteral().getValue().toString());
+	    	if (sol.get("description") != null) _cb = _cb.replace("${property.description}", sol.get("description").asLiteral().getString());
 	    	else _cb = _cb.replace("${property.description}","<del>");
 
 	    	if (sol.get("domain") != null) _cb = _cb.replace("${property.classdomain}", createHTMLResource(sol.get("domain").asResource().toString()));
@@ -418,11 +458,18 @@ public class Generator {
 	    	if (sol.get("range") != null) _cb = _cb.replace("${property.classrange}", createHTMLResource(sol.get("range").asResource().toString()));
 	    	else _cb = _cb.replace("${property.classrange}", "<del>");
 	    		
-	    	if (sol.get("mincardinality") != null) _cb = _cb.replace("${property.mincardinality}", String.valueOf(sol.get("mincardinality").asLiteral().getInt()));
-	    	else _cb = _cb.replace("${property.mincardinality}","<del>");
+	    	if (minCardinality.containsKey(sol.get("class").asResource().getURI())){
+	    		 _cb = _cb.replace("${property.mincardinality}", minCardinality.get(sol.get("class").asResource().getURI()).toString());
+	    	} else _cb = _cb.replace("${property.mincardinality}","<del>");
 	    	
-	    	if (sol.get("maxcardinality") != null) _cb = _cb.replace("${property.maxcardinality}", String.valueOf(sol.get("maxcardinality").asLiteral().getInt()));
-	    	else _cb = _cb.replace("${property.maxcardinality}","<del>");
+	    	if (maxCardinality.containsKey(sol.get("class").asResource().getURI())){
+	    		 _cb = _cb.replace("${property.maxcardinality}", maxCardinality.get(sol.get("class").asResource().getURI()).toString());
+	    	} else _cb = _cb.replace("${property.maxcardinality}","<del>");
+	    	
+	    	if (cardinality.containsKey(sol.get("class").asResource().getURI())){
+	    		 _cb = _cb.replace("${property.cardinality}", cardinality.get(sol.get("class").asResource().getURI()).toString());
+	    	} else _cb = _cb.replace("${property.cardinality}","<del>");
+
 	    	
 	    	if (sol.get("inverse") != null) _cb = _cb.replace("${property.inverse}", createHTMLResource(sol.get("inverse").asResource().toString()));
 	    	else _cb = _cb.replace("${property.inverse}","<del>");
