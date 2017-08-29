@@ -59,6 +59,10 @@
 		<ul style="padding: 0; list-style-type: none;">
 			${ontology.authors}
 		</ul>
+		<h3 hidden>Contributors:</h3>
+		<ul style="padding: 0; list-style-type: none;">
+			${ontology.contributors}
+		</ul>
 		<h3>Serialisations:</h3>
 			<span id="serialisation"></span>
 		<hr/>
@@ -108,6 +112,7 @@
 	    		<h4>In Range of:</h4> ${class.propertyrange}<br/>
 	    		<h4>Subclass of:</h4> ${class.subclassof}<br/>
 	    		<h4>Subclassed By:</h4> ${class.subclassedby}<br/>
+	    		<h4>Equivalent Class of:</h4> ${class.equivalentClass}<br/>
 	    	</div>
 	   	</div>
 		
@@ -125,9 +130,12 @@
 	    		<h4>Range of:</h4> ${property.classrange}<br/>
 	    		<h4>Has Minimum Cardinality:</h4> ${property.mincardinality}<br/>
 	    		<h4>Has Maximum Cardinality:</h4> ${property.maxcardinality}<br/>
+	    		<h4>Has Cardinality:</h4> ${property.cardinality}<br/>
 	    		<h4>Inverse of:</h4> ${property.inverse}<br/>
 	    		<h4>Sub-Property of:</h4> ${property.subpropertyof}<br/>
 	    		<h4>Super-Property of:</h4> ${property.subpropertyby}<br/>
+			<h4>Equivalent Property of:</h4> ${property.equivalentProperty}<br/>
+	    		
 	    	</div>
 	    </div>
 		

@@ -24,6 +24,7 @@ import org.semarglproject.jena.core.sink.JenaSink;
 import org.semarglproject.rdf.rdfa.RdfaParser;
 import org.semarglproject.source.StreamProcessor;
 
+import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryExecution;
 import com.hp.hpl.jena.query.QueryExecutionFactory;
@@ -89,17 +90,26 @@ public class Generator {
 	    	if (sol.get("versionInfo") != null) htmlTemplate = htmlTemplate.replace("${ontology.versionInfo}", sol.get("version").asLiteral().getString());
 	    }
 	    
+	    authorsAndContributors(true);
+	    authorsAndContributors(false);
+	}
+	
+	private static void authorsAndContributors(boolean isAuthor) {
+		
+		Property authorOrContributor = DCTerms.contributor ;
+		if (isAuthor) authorOrContributor = DCTerms.creator ;
+		
 	    String queryAuthors = "SELECT ?name ?page ?email ?atr WHERE {"+
 				"?namespace a <" + OWL.Ontology + "> ." +
-				"?namespace <"+ DCTerms.creator + "> ?atr ." +
+				"?namespace <"+ authorOrContributor + "> ?atr ." +
 				"OPTIONAL {?atr <" + FOAF.name + "> ?name .}"+
 				"OPTIONAL {?atr <" + FOAF.homepage + "> ?page . }"+
 				"OPTIONAL {?atr <" + FOAF.mbox + "> ?email . }"+
 				"}";
 	   
-	    qry = QueryFactory.create(queryAuthors);
-	    qe = QueryExecutionFactory.create(qry, ontology);
-	    rs = qe.execSelect();
+	    Query qry = QueryFactory.create(queryAuthors);
+	    QueryExecution qe = QueryExecutionFactory.create(qry, ontology);
+	    ResultSet rs = qe.execSelect();
 	    
 	    StringBuilder sb = new StringBuilder();
 
@@ -180,8 +190,15 @@ public class Generator {
 	    	sb.append("</li>");
 	    	sb.append(System.getProperty("line.separator"));
 	    }
-	    htmlTemplate = htmlTemplate.replace("${ontology.authors}", sb.toString());
 	    
+	    if (isAuthor) htmlTemplate = htmlTemplate.replace("${ontology.authors}", sb.toString());
+	    else {
+	    		htmlTemplate = htmlTemplate.replace("${ontology.contributors}", sb.toString());
+	    		if (sb.length() > 0) {
+		    		htmlTemplate = htmlTemplate.replace("<h3 hidden=\"\">Contributors:</h3>", "<h3>Contributors:</h3>");
+	    		}
+	    		
+	    }
 	}
 	
 	private static void classDescription(){
@@ -238,6 +255,8 @@ public class Generator {
 	    	_cb = _cb.replace("${class.propertyrange}", createClassPropertyRange(sol.get("class").asResource().toString()));
 	    	_cb = _cb.replace("${class.subclassof}", createClassSubClassOf(sol.get("class").asResource().toString()));
 	    	_cb = _cb.replace("${class.subclassedby}", createClassSubClassedBy(sol.get("class").asResource().toString()));
+	    	_cb = _cb.replace("${class.equivalentClass}", createClassEquivalentTo(sol.get("class").asResource().toString()));
+
 
 	    	_cb = _cb.replaceAll("(.)+(<del>)\n", "");
 	    	
@@ -368,6 +387,26 @@ public class Generator {
 		return ret.toString();
 	}
 	
+	private static String createClassEquivalentTo(String classURI){
+		Resource cls = ontology.createResource(classURI);
+		Property dom = ontology.createProperty(OWL.equivalentClass.getURI());
+		
+		List<RDFNode> lst = ontology.listObjectsOfProperty(cls,dom).toList();
+		StringBuilder ret = new StringBuilder();
+		
+		for(RDFNode r : lst){
+	    	ret.append(createHTMLResource(r.asResource().toString()));
+	    	ret.append(", ");
+		}
+		if (ret.length() > 0){
+			ret.deleteCharAt(ret.lastIndexOf(","));
+		} else {
+			ret.append("<del>");
+		}
+		
+		return ret.toString();
+	}
+	
 	private static String createHTMLResource(String resource){
 		String ret = "";
 
@@ -420,6 +459,7 @@ public class Generator {
 				"OPTIONAL {?class <" + RDFS.range + "> ?range.}  " +
 				"OPTIONAL {?class <" + OWL.inverseOf + "> ?inverse.  }" +
 				"OPTIONAL {?class <" + RDFS.subPropertyOf + "> ?subpropertyof.  }" +
+				"OPTIONAL {?class <" + OWL.equivalentProperty + "> ?equivalentProperty.  }" +
 				"}";
 		
 		qry = QueryFactory.create(queryClassDescription);
@@ -476,6 +516,10 @@ public class Generator {
 	    	
 	    	if (sol.get("subpropertyof") != null) _cb = _cb.replace("${property.subpropertyof}", createHTMLResource(sol.get("subpropertyof").asResource().toString()));
 	    	else _cb = _cb.replace("${property.subpropertyof}","<del>");
+
+	    	if (sol.get("equivalentProperty") != null) _cb = _cb.replace("${property.equivalentProperty}", createHTMLResource(sol.get("equivalentProperty").asResource().toString()));
+	    	else _cb = _cb.replace("${property.equivalentProperty}","<del>");
+
 	    	
 	    	_cb = _cb.replace("${property.subpropertyby}", createSubPropertyBy(sol.get("class").asResource().toString()));
 	    	
